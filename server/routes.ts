@@ -71,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/chat/message', upload.array('files', 5), async (req, res) => {
     try {
       const { sessionId, message, sender } = req.body;
-      const files = req.files as Express.Multer.File[] || [];
+      const files = (req as any).files as Express.Multer.File[] || [];
 
       // Validate input
       const messageData = insertChatMessageSchema.parse({

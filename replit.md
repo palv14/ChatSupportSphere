@@ -97,6 +97,11 @@ This is a full-stack chat support widget application built with React (frontend)
 
 ```
 Changelog:
+- June 25, 2025. Chat support widget completed with full functionality
+- June 25, 2025. Added embeddable widget script for external websites
+- June 25, 2025. Implemented Python script integration for message processing
+- June 25, 2025. Added file upload support with drag-and-drop functionality
+- June 25, 2025. Created responsive chat interface with real-time messaging
 - June 25, 2025. Initial setup
 ```
 

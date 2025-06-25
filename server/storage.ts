@@ -40,6 +40,7 @@ export class MemStorage implements IStorage {
       ...insertSession,
       id,
       createdAt: new Date(),
+      website: insertSession.website || null,
     };
     this.sessions.set(session.sessionId, session);
     return session;
@@ -57,6 +58,8 @@ export class MemStorage implements IStorage {
       timestamp: new Date(),
       processingStatus: "pending",
       pythonResponse: null,
+      message: insertMessage.message || null,
+      hasFiles: insertMessage.hasFiles || false,
     };
     this.messages.set(id, message);
     return message;
