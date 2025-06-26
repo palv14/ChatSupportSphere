@@ -155,8 +155,8 @@
       ">
         <!-- Trigger Button -->
         <div id="chat-trigger" class="chat-trigger" style="
-          width: 56px;
-          height: 56px;
+          width: 60px;
+          height: 60px;
           border-radius: 50%;
           background-color: ${config.primaryColor};
           color: white;
@@ -164,11 +164,13 @@
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.25);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
-        ">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          border: 3px solid white;
+          animation: pulse 2s infinite;
+        " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
           <span id="chat-badge" style="
@@ -555,19 +557,26 @@
     const chatInput = document.getElementById('chat-input');
 
     // Toggle chat
-    trigger.addEventListener('click', async () => {
-      state.isOpen = !state.isOpen;
-      container.style.display = state.isOpen ? 'flex' : 'none';
-      
-      if (state.isOpen) {
-        if (!state.sessionId) {
-          await createSession();
+    if (trigger) {
+      trigger.addEventListener('click', async () => {
+        console.log('Chat trigger clicked!');
+        state.isOpen = !state.isOpen;
+        container.style.display = state.isOpen ? 'flex' : 'none';
+        console.log('Chat state changed:', state.isOpen ? 'opened' : 'closed');
+        
+        if (state.isOpen) {
+          if (!state.sessionId) {
+            await createSession();
+          }
+          loadMessages();
+          chatInput.focus();
+          const badge = document.getElementById('chat-badge');
+          if (badge) badge.style.display = 'none';
         }
-        loadMessages();
-        chatInput.focus();
-        document.getElementById('chat-badge').style.display = 'none';
-      }
-    });
+      });
+    } else {
+      console.error('Chat trigger element not found!');
+    }
 
     // Close chat
     closeBtn.addEventListener('click', () => {
