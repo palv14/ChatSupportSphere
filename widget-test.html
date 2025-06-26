@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Widget Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat Widget Integration Test</h1>
+        <p>This page demonstrates how to integrate the chat support widget into any website.</p>
+        
+        <div class="instructions">
+            <h3>Widget Features:</h3>
+            <ul>
+                <li>Circular chat button in bottom-right corner</li>
+                <li>Click to expand into full chat interface</li>
+                <li>Send text messages and upload files</li>
+                <li>Messages processed by Python script</li>
+                <li>Real-time status updates</li>
+            </ul>
+        </div>
+        
+        <p>Look for the blue circular chat button in the bottom-right corner of this page. Click it to start chatting!</p>
+    </div>
+    
+    <!-- Chat Support Widget - This is the only line needed to add the widget -->
+    <script src="http://localhost:5000/widget.js" 
+            data-endpoint="http://localhost:5000"
+            data-position="bottom-right"
+            data-primary-color="#6366F1"></script>
+</body>
+</html>

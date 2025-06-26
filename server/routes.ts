@@ -181,6 +181,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Serve test HTML file
+  app.get('/test', (req, res) => {
+    res.sendFile('test-widget.html', { root: process.cwd() });
+  });
+
   // Serve the embeddable widget script
   app.get('/widget.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript');
