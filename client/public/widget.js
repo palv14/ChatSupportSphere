@@ -148,29 +148,32 @@
     const positionClass = getPositionClass(config.position);
     
     const widgetHTML = `
-      <div id="chat-widget" class="chat-widget ${positionClass}" style="
-        position: fixed;
-        z-index: 999999;
+      <div id="chat-widget" class="chat-widget chat-widget-test ${positionClass}" style="
+        position: fixed !important;
+        z-index: 999999 !important;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        pointer-events: auto !important;
+        ${getPositionClass(config.position)}
       ">
         <!-- Trigger Button -->
         <div id="chat-trigger" class="chat-trigger" style="
-          width: 60px;
-          height: 60px;
+          width: 80px;
+          height: 80px;
           border-radius: 50%;
-          background-color: ${config.primaryColor};
+          background: linear-gradient(135deg, ${config.primaryColor} 0%, #8B5CF6 100%);
           color: white;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+          box-shadow: 0 8px 25px rgba(0,0,0,0.4);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
-          border: 3px solid white;
+          border: 4px solid white;
           animation: pulse 2s infinite;
-        " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          z-index: 999999;
+        " onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
           <span id="chat-badge" style="
