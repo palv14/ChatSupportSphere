@@ -638,13 +638,27 @@
 
   // Initialize widget
   const initWidget = () => {
+    console.log('Initializing chat widget...');
+    
     // Create and inject widget HTML
     const widgetContainer = document.createElement('div');
-    widgetContainer.innerHTML = createWidget();
-    document.body.appendChild(widgetContainer.firstElementChild);
+    const widgetHTML = createWidget();
+    console.log('Widget HTML created:', widgetHTML.substring(0, 100) + '...');
+    
+    widgetContainer.innerHTML = widgetHTML;
+    const widgetElement = widgetContainer.firstElementChild;
+    
+    if (widgetElement) {
+      document.body.appendChild(widgetElement);
+      console.log('Widget element added to DOM');
+    } else {
+      console.error('Failed to create widget element');
+      return;
+    }
 
     // Setup event handlers
     setupEventHandlers();
+    console.log('Widget initialization complete');
 
     // Start polling for messages when chat is open
     setInterval(() => {
@@ -655,9 +669,13 @@
   };
 
   // Wait for DOM to be ready
+  console.log('Chat widget script loaded, DOM state:', document.readyState);
+  
   if (document.readyState === 'loading') {
+    console.log('Waiting for DOM content loaded...');
     document.addEventListener('DOMContentLoaded', initWidget);
   } else {
+    console.log('DOM ready, initializing widget...');
     initWidget();
   }
 
