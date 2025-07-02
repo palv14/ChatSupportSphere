@@ -31,6 +31,14 @@ export const chatFiles = pgTable("chat_files", {
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 });
 
+export const chatFeedback = pgTable("chat_feedback", {
+  id: serial("id").primaryKey(),
+  sessionId: text("session_id").notNull(),
+  messageId: integer("message_id").notNull(),
+  isHelpful: boolean("is_helpful").notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
 export const insertChatSessionSchema = createInsertSchema(chatSessions).omit({
   id: true,
   createdAt: true,
@@ -39,13 +47,16 @@ export const insertChatSessionSchema = createInsertSchema(chatSessions).omit({
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   id: true,
   timestamp: true,
-  processingStatus: true,
-  pythonResponse: true,
 });
 
 export const insertChatFileSchema = createInsertSchema(chatFiles).omit({
   id: true,
   uploadedAt: true,
+});
+
+export const insertChatFeedbackSchema = createInsertSchema(chatFeedback).omit({
+  id: true,
+  timestamp: true,
 });
 
 export type ChatSession = typeof chatSessions.$inferSelect;
@@ -54,6 +65,8 @@ export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatFile = typeof chatFiles.$inferSelect;
 export type InsertChatFile = z.infer<typeof insertChatFileSchema>;
+export type ChatFeedback = typeof chatFeedback.$inferSelect;
+export type InsertChatFeedback = z.infer<typeof insertChatFeedbackSchema>;
 
 export const widgetConfigSchema = z.object({
   endpoint: z.string().url(),

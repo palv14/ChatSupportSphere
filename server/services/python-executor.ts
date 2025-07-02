@@ -12,10 +12,20 @@ export interface PythonExecutionResult {
 export class PythonExecutor {
   private pythonPath: string;
   private scriptPath: string;
+  private uploadsDir: string;
 
   constructor(scriptPath: string = 'python/initialize.py') {
     this.pythonPath = process.env.PYTHON_PATH || 'python3';
     this.scriptPath = path.resolve(scriptPath);
+    this.uploadsDir = path.resolve('uploads');
+  }
+
+  // Validate and sanitize file paths
+  private validateFilePath(filePath: string): boolean {
+    const resolvedPath = path.resolve(filePath);
+    return resolvedPath.startsWith(this.uploadsDir) && 
+           !resolvedPath.includes('..') && 
+           fs.existsSync(resolvedPath);
   }
 
   async executePythonScript(
@@ -33,6 +43,17 @@ export class PythonExecutor {
           error: `Python script not found at ${this.scriptPath}`,
           executionTime: Date.now() - startTime
         };
+      }
+
+      // Validate all file paths
+      for (const file of files) {
+        if (!this.validateFilePath(file.path)) {
+          return {
+            success: false,
+            error: `Invalid file path: ${file.path}`,
+            executionTime: Date.now() - startTime
+          };
+        }
       }
 
       // Prepare input data for Python script

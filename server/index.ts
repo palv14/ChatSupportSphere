@@ -12,7 +12,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // ✅ Serve files from client/public
+console.log("Setting up static middleware...");
 app.use(express.static(path.join(__dirname, "..", "client", "public")));
+console.log("Static middleware setup complete");
+
+
+// ✅ Log the static path
+console.log("Static path:", path.join(__dirname, "..", "client", "public"));
+
 
 (async () => {
   const server = await registerRoutes(app);
@@ -38,14 +45,8 @@ app.use(express.static(path.join(__dirname, "..", "client", "public")));
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  server.listen(port, '127.0.0.1', () => {
+    log(`Serving on http://127.0.0.1:${port}`);
+  });
+  
 })();

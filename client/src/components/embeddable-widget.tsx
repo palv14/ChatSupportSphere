@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   MessageCircle, 
   X, 
@@ -73,32 +73,6 @@ const getFileIcon = (mimetype: string) => {
   return <FileText className="h-4 w-4" />;
 };
 
-// API helper
-const apiRequest = async (method: string, url: string, data?: any) => {
-  const fullUrl = url.startsWith('http') ? url : `${window.CHAT_WIDGET_CONFIG.endpoint}${url}`;
-  
-  const options: RequestInit = {
-    method,
-    credentials: 'include',
-    headers: data ? { 'Content-Type': 'application/json' } : {},
-  };
-
-  if (data && !(data instanceof FormData)) {
-    options.body = JSON.stringify(data);
-  } else if (data instanceof FormData) {
-    delete options.headers;
-    options.body = data;
-  }
-
-  const response = await fetch(fullUrl, options);
-  
-  if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
-  }
-  
-  return response;
-};
-
 function EmbeddableWidget({ config }: { config: WidgetConfig }) {
   const [isOpen, setIsOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -107,6 +81,10 @@ function EmbeddableWidget({ config }: { config: WidgetConfig }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+  const [pendingUserMsgId, setPendingUserMsgId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const [fastPolling, setFastPolling] = useState(false);
 
   // Create or get session
   const { data: session } = useQuery({
@@ -122,7 +100,7 @@ function EmbeddableWidget({ config }: { config: WidgetConfig }) {
   });
 
   // Get messages for the session
-  const { data: messages = [], isLoading: messagesLoading } = useQuery({
+  const { data: messages = [], isLoading: messagesLoading, refetch } = useQuery({
     queryKey: ['/api/chat/messages', session?.sessionId],
     queryFn: async () => {
       if (!session?.sessionId) return [];
@@ -130,7 +108,7 @@ function EmbeddableWidget({ config }: { config: WidgetConfig }) {
       return response.json();
     },
     enabled: !!session?.sessionId,
-    refetchInterval: 2000
+    refetchInterval: fastPolling ? 500 : 2000
   });
 
   // Send message mutation
@@ -140,32 +118,98 @@ function EmbeddableWidget({ config }: { config: WidgetConfig }) {
       formData.append('sessionId', session?.sessionId || '');
       formData.append('message', message);
       formData.append('sender', 'user');
-      
       files.forEach((file) => {
         formData.append('files', file);
       });
-
       const response = await fetch(`${config.endpoint}/api/chat/message`, {
         method: 'POST',
         body: formData,
         credentials: 'include'
       });
-
       if (!response.ok) {
         throw new Error('Failed to send message');
       }
-
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/chat/messages'] });
+    onMutate: ({ message, files }) => {
+      // Add user message immediately with a temporary ID and processing status
+      const tempId = Date.now();
+      setPendingUserMsgId(tempId);
+      setLocalMessages((prev) => [
+        ...prev,
+        {
+          id: tempId,
+          message,
+          sender: 'user',
+          timestamp: new Date().toISOString(),
+          hasFiles: files.length > 0,
+          processingStatus: 'processing',
+          pythonResponse: null,
+          files: []
+        }
+      ]);
+      setFastPolling(true); // Start aggressive polling after sending
+    },
+    onSuccess: (data) => {
+      setLocalMessages((prev) => {
+        // Replace the pending user message (by temp ID) with the real message from backend
+        return prev.map((msg) =>
+          msg.id === pendingUserMsgId
+            ? { ...data, processingStatus: 'processing' }
+            : msg
+        );
+      });
+      setPendingUserMsgId(null);
       setMessage("");
       setAttachedFiles([]);
     },
     onError: (error) => {
+      setPendingUserMsgId(null);
+      setLocalMessages((prev) => prev.filter((msg) => msg.id !== pendingUserMsgId));
       console.error('Failed to send message:', error);
     }
   });
+
+  // Merge localMessages with messages from the server, avoiding duplicates by ID
+  const mergedMessages = [
+    ...messages,
+    ...localMessages.filter((lm: ChatMessage) => !messages.some((m: ChatMessage) => m.id === lm.id))
+  ];
+
+  // After merging messages, update user message processingStatus to 'completed' if a bot reply exists after it
+  const processedMessages = mergedMessages.map((msg, idx, arr) => {
+    if (
+      msg.sender === 'user' &&
+      msg.processingStatus === 'processing'
+    ) {
+      // Find the next bot message after this user message
+      const hasBotReply = arr.slice(idx + 1).some(
+        (m) => m.sender === 'bot' && new Date(m.timestamp) > new Date(msg.timestamp)
+      );
+      if (hasBotReply) {
+        return { ...msg, processingStatus: 'completed' };
+      }
+    }
+    return msg;
+  });
+
+  // When a bot message is detected after the latest user message, stop fast polling
+  useEffect(() => {
+    const latestUserMsg = processedMessages
+      .filter((msg) => msg.sender === "user")
+      .slice(-1)[0];
+    const latestBotMsg = processedMessages
+      .filter((msg) => msg.sender === "bot")
+      .slice(-1)[0];
+    if (
+      fastPolling &&
+      latestUserMsg &&
+      latestBotMsg &&
+      new Date(latestBotMsg.timestamp) > new Date(latestUserMsg.timestamp)
+    ) {
+      setFastPolling(false);
+    }
+  }, [processedMessages, fastPolling]);
 
   useEffect(() => {
     if (session?.sessionId && !sessionId) {
@@ -175,7 +219,7 @@ function EmbeddableWidget({ config }: { config: WidgetConfig }) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [processedMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -243,6 +287,33 @@ function EmbeddableWidget({ config }: { config: WidgetConfig }) {
       default:
         return `${base} bottom-6 right-6`;
     }
+  };
+
+  // Fix window.CHAT_WIDGET_CONFIG type error and ensure config is in scope
+  const getApiEndpoint = () => {
+    // @ts-ignore
+    return (window.CHAT_WIDGET_CONFIG?.endpoint as string) || config.endpoint;
+  };
+
+  // API helper
+  const apiRequest = async (method: string, url: string, data?: any) => {
+    const fullUrl = url.startsWith('http') ? url : `${getApiEndpoint()}${url}`;
+    const options: RequestInit = {
+      method,
+      credentials: 'include',
+      headers: data ? { 'Content-Type': 'application/json' } : {},
+    };
+    if (data && !(data instanceof FormData)) {
+      options.body = JSON.stringify(data);
+    } else if (data instanceof FormData) {
+      delete options.headers;
+      options.body = data;
+    }
+    const response = await fetch(fullUrl, options);
+    if (!response.ok) {
+      throw new Error(`${response.status}: ${response.statusText}`);
+    }
+    return response;
   };
 
   if (!isOpen) {
@@ -333,7 +404,7 @@ function EmbeddableWidget({ config }: { config: WidgetConfig }) {
               </div>
 
               {/* Chat messages */}
-              {messages.map((msg: ChatMessage) => (
+              {processedMessages.map((msg: ChatMessage) => (
                 <motion.div
                   key={msg.id}
                   initial={{ opacity: 0, y: 10 }}

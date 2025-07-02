@@ -89,33 +89,35 @@ export function ChatWidget({ config }: ChatWidgetProps) {
   });
 
   // Send message mutation
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const sendMessageMutation = useMutation({
     mutationFn: async ({ message, files }: { message: string; files: File[] }) => {
       const formData = new FormData();
       formData.append('sessionId', session?.sessionId || '');
       formData.append('message', message);
       formData.append('sender', 'user');
-      
       files.forEach((file, index) => {
         formData.append('files', file);
       });
-
       const response = await fetch('/api/chat/message', {
         method: 'POST',
         body: formData,
         credentials: 'include'
       });
-
       if (!response.ok) {
         throw new Error('Failed to send message');
       }
-
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/chat/messages'] });
+    onSuccess: (data) => {
+      setLocalMessages((prev) => [
+        ...prev,
+        ...(data.userMessage ? [data.userMessage] : []),
+        ...(data.botMessage ? [data.botMessage] : [])
+      ]);
       setMessage("");
       setAttachedFiles([]);
+      queryClient.invalidateQueries({ queryKey: ['/api/chat/messages'] });
     },
     onError: (error) => {
       toast({
@@ -125,6 +127,12 @@ export function ChatWidget({ config }: ChatWidgetProps) {
       });
     }
   });
+
+  // Merge localMessages with messages from the server, avoiding duplicates
+  const mergedMessages = [
+    ...messages,
+    ...localMessages.filter((lm: ChatMessage) => !messages.some((m: ChatMessage) => m.id === lm.id))
+  ];
 
   useEffect(() => {
     if (session?.sessionId && !sessionId) {
@@ -304,7 +312,7 @@ export function ChatWidget({ config }: ChatWidgetProps) {
               </div>
 
               {/* Chat messages */}
-              {messages.map((msg: ChatMessage) => (
+              {mergedMessages.map((msg: ChatMessage) => (
                 <motion.div
                   key={msg.id}
                   initial={{ opacity: 0, y: 10 }}

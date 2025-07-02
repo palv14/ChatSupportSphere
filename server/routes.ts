@@ -8,26 +8,121 @@ import { pythonExecutor } from "./services/python-executor";
 import { insertChatSessionSchema, insertChatMessageSchema, widgetConfigSchema } from "@shared/schema";
 import { nanoid } from "nanoid";
 
+// Simple in-memory rate limiting
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+const rateLimit = (maxRequests: number = 100, windowMs: number = 15 * 60 * 1000) => {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // Skip rate limiting for OPTIONS requests (preflight)
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+    
+    const key = req.ip || 'unknown';
+    const now = Date.now();
+    const windowStart = now - windowMs;
+
+    const userRequests = rateLimitStore.get(key);
+    
+    if (!userRequests || userRequests.resetTime < now) {
+      rateLimitStore.set(key, { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+
+    if (userRequests.count >= maxRequests) {
+      return res.status(429).json({ error: 'Too many requests, please try again later' });
+    }
+
+    userRequests.count++;
+    next();
+  };
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Enable CORS for all routes
+  // Enable CORS with proper restrictions
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+    'http://localhost:3000', 
+    'http://localhost:5000',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5000'
+  ];
+  
   app.use(cors({
-    origin: true,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // In development, be more permissive
+      if (process.env.NODE_ENV === 'development') {
+        // Allow localhost and 127.0.0.1 variations
+        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+          return callback(null, true);
+        }
+      }
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    maxAge: 86400 // Cache preflight for 24 hours
   }));
 
-  // Serve uploaded files
-  app.use('/api/files', express.static('uploads'));
+  // Handle CORS errors gracefully
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err.message === 'Not allowed by CORS') {
+      console.error('CORS Error:', {
+        origin: req.get('origin'),
+        allowedOrigins,
+        nodeEnv: process.env.NODE_ENV
+      });
+      return res.status(403).json({ 
+        error: 'CORS policy violation',
+        message: 'Origin not allowed by CORS policy'
+      });
+    }
+    next(err);
+  });
+
+  // Serve uploaded files with authentication check
+  app.use('/api/files', (req, res, next) => {
+    // Add basic authentication check for file access
+    const sessionId = req.query.sessionId;
+    if (!sessionId) {
+      return res.status(401).json({ error: 'Session ID required for file access' });
+    }
+    next();
+  }, express.static('uploads'));
+
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
 
   // Create or get chat session
-  app.post('/api/chat/session', async (req, res) => {
+  app.post('/api/chat/session', rateLimit(50, 15 * 60 * 1000), async (req, res) => {
     try {
+      console.log('[DEBUG] Session creation request:', {
+        body: req.body,
+        origin: req.get('origin'),
+        referer: req.get('referer'),
+        userAgent: req.get('user-agent')
+      });
+      
       const { sessionId, website } = req.body;
       
       if (sessionId) {
         const existingSession = await storage.getChatSession(sessionId);
         if (existingSession) {
+          console.log('[DEBUG] Returning existing session:', existingSession.sessionId);
           return res.json(existingSession);
         }
       }
@@ -38,11 +133,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         website: website || req.get('origin') || req.get('referer')
       });
 
+      console.log('[DEBUG] Creating new session:', sessionData);
       const session = await storage.createChatSession(sessionData);
+      console.log('[DEBUG] Session created successfully:', session.sessionId);
       res.json(session);
     } catch (error) {
       console.error('Error creating/getting chat session:', error);
-      res.status(500).json({ error: 'Failed to create or get chat session' });
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      res.status(500).json({ 
+        error: 'Failed to create or get chat session',
+        details: isDevelopment ? error instanceof Error ? error.message : 'Unknown error' : undefined
+      });
     }
   });
 
@@ -63,12 +164,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(messagesWithFiles);
     } catch (error) {
       console.error('Error fetching chat messages:', error);
-      res.status(500).json({ error: 'Failed to fetch chat messages' });
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      res.status(500).json({ 
+        error: 'Failed to fetch chat messages',
+        details: isDevelopment ? error instanceof Error ? error.message : 'Unknown error' : undefined
+      });
     }
   });
 
   // Send a new chat message
-  app.post('/api/chat/message', upload.array('files', 5), async (req, res) => {
+  app.post('/api/chat/message', rateLimit(30, 15 * 60 * 1000), upload.array('files', 5), async (req, res) => {
     try {
       const { sessionId, message, sender } = req.body;
       const files = (req as any).files as Express.Multer.File[] || [];
@@ -99,7 +204,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         )
       );
 
-      // If this is a user message, process it with Python script
       if (sender === 'user') {
         // Update status to processing
         await storage.updateMessageStatus(chatMessage.id, 'processing');
@@ -131,7 +235,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 sessionId,
                 message: botResponse,
                 sender: 'bot',
-                hasFiles: false
+                hasFiles: false,
+                processingStatus: 'completed',
+                pythonResponse: JSON.stringify(result.output)
               });
             } else {
               await storage.updateMessageStatus(chatMessage.id, 'failed', JSON.stringify({ error: result.error }));
@@ -143,10 +249,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Immediately return the user message and files
       res.json({ ...chatMessage, files: savedFiles });
     } catch (error) {
       console.error('Error sending chat message:', error);
-      res.status(500).json({ error: 'Failed to send chat message' });
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      res.status(500).json({ 
+        error: 'Failed to send chat message',
+        details: isDevelopment ? error instanceof Error ? error.message : 'Unknown error' : undefined
+      });
     }
   });
 
@@ -167,7 +278,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error fetching message status:', error);
-      res.status(500).json({ error: 'Failed to fetch message status' });
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      res.status(500).json({ 
+        error: 'Failed to fetch message status',
+        details: isDevelopment ? error instanceof Error ? error.message : 'Unknown error' : undefined
+      });
+    }
+  });
+
+  // Submit feedback for a message
+  app.post('/api/feedback', rateLimit(20, 15 * 60 * 1000), async (req, res) => {
+    try {
+      const { sessionId, messageId, isHelpful } = req.body;
+      
+      // Validate input
+      if (!sessionId || !messageId || typeof isHelpful !== 'boolean') {
+        return res.status(400).json({ error: 'Missing required fields: sessionId, messageId, isHelpful' });
+      }
+
+      // Verify session exists
+      const session = await storage.getChatSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      // Check if feedback already exists for this message
+      const existingFeedback = await storage.getFeedbackForMessage(parseInt(messageId));
+      
+      let feedback;
+      if (existingFeedback) {
+        // Update existing feedback
+        feedback = await storage.updateFeedback(existingFeedback.id, isHelpful);
+        console.log('[DEBUG] Feedback updated:', {
+          sessionId,
+          messageId,
+          isHelpful,
+          feedbackId: feedback.id,
+          action: 'updated'
+        });
+      } else {
+        // Create new feedback
+        feedback = await storage.createFeedback({
+          sessionId,
+          messageId: parseInt(messageId),
+          isHelpful
+        });
+        console.log('[DEBUG] Feedback submitted:', {
+          sessionId,
+          messageId,
+          isHelpful,
+          feedbackId: feedback.id,
+          action: 'created'
+        });
+      }
+
+      res.json({ success: true, feedback });
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      res.status(500).json({ 
+        error: 'Failed to submit feedback',
+        details: isDevelopment ? error instanceof Error ? error.message : 'Unknown error' : undefined
+      });
     }
   });
 

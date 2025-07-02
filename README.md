@@ -11,6 +11,73 @@ An embeddable chat support widget with Python script integration for processing 
 - **Customizable**: Configurable colors, positioning, and branding
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 
+## Environment Setup
+
+### Required Environment Variables
+
+Before running the application, you need to set up your environment variables. Copy the example file and fill in your values:
+
+```bash
+# Copy the example environment file
+cp python/env.example python/.env
+
+# Edit the .env file with your actual values
+```
+
+#### Required Variables:
+
+- `AZURE_AI_ENDPOINT`: Your Azure AI Services endpoint URL
+- `AZURE_AGENT_ID`: Your Azure AI agent ID
+
+#### Example .env file:
+```env
+AZURE_AI_ENDPOINT=https://your-endpoint.services.ai.azure.com/api/projects/YourProject
+AZURE_AGENT_ID=your_agent_id_here
+```
+
+### Security Notes
+
+⚠️ **Important**: Never commit your `.env` file to version control. The `.gitignore` file is configured to exclude it automatically.
+
+## Security Features
+
+This application includes several security measures to protect against common vulnerabilities:
+
+### 🔒 **Implemented Security Measures**
+
+1. **CORS Protection**: Restrictive CORS configuration that only allows specified origins
+2. **File Upload Security**: 
+   - File type validation (images, PDFs, documents only)
+   - File size limits (10MB per file, 5 files per request)
+   - Path traversal protection
+   - Secure file storage with UUID-based naming
+3. **Rate Limiting**: API endpoints are rate-limited to prevent abuse
+4. **Input Validation**: All inputs are validated using Zod schemas
+5. **Error Handling**: Secure error messages that don't leak sensitive information in production
+6. **File Access Control**: Uploaded files require session authentication for access
+
+### 🔧 **Security Configuration**
+
+Set these environment variables for production:
+
+```env
+# Security
+ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+NODE_ENV=production
+
+# Azure AI Services
+AZURE_AI_ENDPOINT=https://your-endpoint.services.ai.azure.com/api/projects/YourProject
+AZURE_AGENT_ID=your_agent_id_here
+```
+
+### 🛡️ **Additional Security Recommendations**
+
+1. **Use HTTPS**: Always use HTTPS in production
+2. **Database Security**: Use strong database passwords and connection strings
+3. **Regular Updates**: Keep dependencies updated
+4. **Monitoring**: Implement logging and monitoring for suspicious activity
+5. **Backup Strategy**: Regular backups of chat data and uploaded files
+
 ## Quick Start
 
 ### 1. Installation

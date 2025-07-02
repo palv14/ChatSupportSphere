@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Widget Feedback Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .test-content {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .test-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 20px 0;
+        }
+        .instructions {
+            text-align: left;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-content">
+        <h1>🧪 Chat Widget Feedback Test</h1>
+        <p>Test the new feedback functionality with thumbs up/down buttons</p>
+        
+        <div class="test-card">
+            <h2>📋 Test Instructions</h2>
+            <div class="instructions">
+                <ol>
+                    <li>Click the chat button in the corner to open the widget</li>
+                    <li>Send a message to get a bot response</li>
+                    <li>Look for the "Was this helpful?" feedback buttons below the bot's response</li>
+                    <li>Click either 👍 (helpful) or 👎 (not helpful)</li>
+                    <li>You should see a "Thank you for your feedback!" message with a "Change feedback" button</li>
+                    <li>Click "Change feedback" to modify your response</li>
+                    <li>The feedback buttons will reappear with visual indication of your previous choice</li>
+                    <li>Click the opposite thumb to change your feedback</li>
+                    <li>The feedback buttons will disappear again after the change</li>
+                    <li>Send another message to see feedback buttons appear again</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>✨ Feedback Features</h2>
+            <ul style="text-align: left; display: inline-block;">
+                <li>✅ Feedback buttons appear only on the most recent bot message</li>
+                <li>✅ Hover effects with color-coded backgrounds</li>
+                <li>✅ Feedback is stored in the database</li>
+                <li>✅ Rate limited to prevent spam</li>
+                <li>✅ Session-based feedback tracking</li>
+                <li>✅ Automatic UI updates after submission</li>
+                <li>✅ <strong>NEW:</strong> "Change feedback" button after submission</li>
+                <li>✅ <strong>NEW:</strong> Visual indication of previous feedback choice</li>
+                <li>✅ <strong>NEW:</strong> Ability to update existing feedback</li>
+            </ul>
+        </div>
+
+        <div class="test-card">
+            <h2>🔧 Technical Details</h2>
+            <p><strong>Endpoint:</strong> POST /api/feedback</p>
+            <p><strong>Data:</strong> sessionId, messageId, isHelpful (boolean)</p>
+            <p><strong>Rate Limit:</strong> 20 requests per 15 minutes</p>
+            <p><strong>Storage:</strong> In-memory (for demo) or database</p>
+        </div>
+    </div>
+
+    <!-- Load the widget -->
+    <script src="http://localhost:5000/widget.js" 
+            data-endpoint="http://localhost:5000"
+            data-position="bottom-right"
+            data-primary-color="#6366F1"></script>
+</body>
+</html> 
