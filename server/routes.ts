@@ -44,7 +44,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'http://localhost:3000', 
     'http://localhost:5000',
     'http://127.0.0.1:3000',
-    'http://127.0.0.1:5000'
+    'http://127.0.0.1:5000',
+    // Add your Azure Web App domain here
+    'https://gyrussupportagent-g6aaf9gndgh2g3hu.eastus-01.azurewebsites.net'
   ];
   
   app.use(cors({

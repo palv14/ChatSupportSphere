@@ -124,3 +124,29 @@ venv.bak/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Vite cache and build artifacts
+.vite/
+vite.config.ts.timestamp-*.mjs
+
+# Azure deployment artifacts
+deployment.zip
+*.zip
+
+# Replit specific files
+.replit
+.replitignore
+
+# Test files (optional - remove if you want to keep them in repo)
+test-widget.html
+feedback-test.html
+widget-test.html
+
+# Development assets (optional - remove if you want to keep them in repo)
+attached_assets/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Local development files
+.env.example

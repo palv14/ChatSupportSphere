@@ -15,7 +15,8 @@ export class PythonExecutor {
   private uploadsDir: string;
 
   constructor(scriptPath: string = 'python/initialize.py') {
-    this.pythonPath = process.env.PYTHON_PATH || 'python3';
+    // Azure Web Apps typically have Python at /usr/bin/python3
+    this.pythonPath = process.env.PYTHON_PATH || '/usr/bin/python3';
     this.scriptPath = path.resolve(scriptPath);
     this.uploadsDir = path.resolve('uploads');
   }
