@@ -2,6 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import { uploadToAzureBlob } from "./azure-blob";
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -73,4 +74,12 @@ export function cleanupFiles(filePaths: string[]): void {
       }
     });
   });
+}
+
+// Example function to handle file upload
+export async function handleFileUpload(file: { buffer: Buffer, originalname: string, mimetype: string }) {
+  // Generate a unique blob name if needed
+  const blobName = `${Date.now()}-${file.originalname}`;
+  const blobUrl = await uploadToAzureBlob(file.buffer, blobName, file.mimetype);
+  return blobUrl;
 }

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import cors from "cors";
 import express from "express";
 import { storage } from "./storage";
-import { upload, processUploadedFiles } from "./services/file-handler";
+import { upload, processUploadedFiles, handleFileUpload } from "./services/file-handler";
 import { pythonExecutor } from "./services/python-executor";
 import { insertChatSessionSchema, insertChatMessageSchema, widgetConfigSchema } from "@shared/schema";
 import { nanoid } from "nanoid";
