@@ -1,4 +1,4 @@
-# Chat Support Widget
+# SupportSphere
 
 An embeddable chat support widget with Python script integration for processing messages and file attachments.
 
@@ -77,6 +77,49 @@ AZURE_AGENT_ID=your_agent_id_here
 3. **Regular Updates**: Keep dependencies updated
 4. **Monitoring**: Implement logging and monitoring for suspicious activity
 5. **Backup Strategy**: Regular backups of chat data and uploaded files
+
+## Azure Blob Storage Integration
+
+This project uses Azure Blob Storage to store incoming attachments.
+
+### Prerequisites
+- An Azure Storage Account
+- A Blob Container created in your storage account
+
+### Local Development Setup
+1. **Install dependencies:**
+   ```sh
+   npm install
+   ```
+2. **Create a `.env` file in the project root:**
+   Copy from `env.example` and fill in your values:
+   ```env
+   AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=youraccount;AccountKey=yourkey;EndpointSuffix=core.windows.net
+   AZURE_STORAGE_CONTAINER_NAME=your-container-name
+   ```
+3. **Start the backend server:**
+   ```sh
+   npm run dev
+   # or your usual backend start command
+   ```
+
+### Azure Deployment Setup
+1. **Set environment variables in Azure Portal:**
+   - Go to your Web App > Configuration > Application settings
+   - Add:
+     - `AZURE_STORAGE_CONNECTION_STRING` (paste from Storage Account > Access keys)
+     - `AZURE_STORAGE_CONTAINER_NAME` (your blob container name)
+   - Save and restart your app
+
+### Troubleshooting
+- **Environment variable not found:** Ensure `.env` exists and `dotenv` is installed. The backend loads `.env` via `import 'dotenv/config';` in `server/index.ts`.
+- **Invalid connection string:** Copy the exact connection string from Azure Portal. It must include `DefaultEndpointsProtocol=https`.
+- **File upload errors:** Check that your container exists and the connection string is correct.
+
+### Backend Requirements
+- Node.js
+- `dotenv` package (installed automatically)
+- `@azure/storage-blob` package (installed automatically)
 
 ## Quick Start
 

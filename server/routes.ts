@@ -7,6 +7,7 @@ import { upload, processUploadedFiles, handleFileUpload } from "./services/file-
 import { pythonExecutor } from "./services/python-executor";
 import { insertChatSessionSchema, insertChatMessageSchema, widgetConfigSchema } from "@shared/schema";
 import { nanoid } from "nanoid";
+import path from "path";
 
 // Simple in-memory rate limiting
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -39,6 +40,9 @@ const rateLimit = (maxRequests: number = 100, windowMs: number = 15 * 60 * 1000)
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve static assets directly (before CORS middleware)
+  app.use('/assets', express.static(path.join(process.cwd(), 'dist', 'public', 'assets')));
+
   // Enable CORS with proper restrictions
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
     'http://localhost:3000', 
