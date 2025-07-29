@@ -123,7 +123,7 @@ Add this single line to any website to embed the chat widget:
 
 ### Default Script Location
 
-The widget processes messages using `python/initialize.py`. This script receives JSON input and should return JSON output.
+The widget processes messages using `python/python_script.py`. This script receives JSON input and should return JSON output.
 
 ### Input Format
 
@@ -157,7 +157,7 @@ The widget processes messages using `python/initialize.py`. This script receives
 
 ### Customizing the Python Script
 
-1. Edit `python/initialize.py`
+1. Edit `python/python_script.py`
 2. Implement your custom logic in the processing functions
 3. Integrate with AI/ML models, databases, or external APIs
 4. Return appropriate JSON responses

@@ -36,10 +36,12 @@ import sys
 import os
 from datetime import datetime
 import mimetypes
+
+# Import required modules
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from azure.ai.agents.models import (
-    ListSortOrder, FilePurpose, FileSearchTool, 
+    FilePurpose, FileSearchTool, 
     MessageInputTextBlock, MessageInputImageFileBlock, MessageImageFileParam,
     MessageAttachment
 )
@@ -465,13 +467,30 @@ def process_agent_response(thread, agent_id):
     """Process the agent response and return the result"""
     try:
         # Process the message with the agent
-        run = project.agents.runs.create_and_process(thread_id=thread.id, agent_id=agent_id)
+        run = project.agents.runs.create(thread_id=thread.id, agent_id=agent_id)
+        
+        # Wait for the run to complete
+        while run.status in ["queued", "in_progress"]:
+            import time
+            time.sleep(2)
+            run = project.agents.runs.get(thread_id=thread.id, run_id=run.id)
         
         if run.status == "failed":
-            return f"I apologize, but I encountered an error processing your request. Please try again."
+            # Get detailed error information from the failed run
+            try:
+                run_details = project.agents.runs.get(thread_id=thread.id, run_id=run.id)
+                
+                if hasattr(run_details, 'last_error') and run_details.last_error:
+                    error_msg = f"Agent run failed: {run_details.last_error.message}"
+                    return f"I apologize, but I encountered an error: {error_msg}"
+                else:
+                    return f"I apologize, but I encountered an error processing your request. Please try again."
+                    
+            except Exception as e:
+                return f"I apologize, but I encountered an error processing your request. Please try again."
         
         # Get messages from the thread
-        messages = project.agents.messages.list(thread_id=thread.id, order=ListSortOrder.ASCENDING)
+        messages = list(project.agents.messages.list(thread_id=thread.id))
         
         # Get the last message from the agent
         for message in messages:
@@ -493,9 +512,6 @@ def main():
         session_id = input_data.get('sessionId', '')
         timestamp = input_data.get('timestamp', '')
         
-        # Log processing start
-        print(f"Processing session {session_id} with {len(files)} files", file=sys.stderr)
-        
         # Analyze the message
         message_analysis = analyze_message(message) if message else {
             "intent": "file_only",
@@ -505,10 +521,6 @@ def main():
         
         # Analyze files
         file_analysis = analyze_files(files) if files else []
-        
-        # Log file analysis results
-        for file_info in file_analysis:
-            print(f"File: {file_info['name']} - {file_info['analysis']}", file=sys.stderr)
         
         # Generate response
         response_text = generate_response(message, files, message_analysis)

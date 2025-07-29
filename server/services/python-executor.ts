@@ -14,10 +14,18 @@ export class PythonExecutor {
   private scriptPath: string;
   private uploadsDir: string;
 
-  constructor(scriptPath: string = 'python/initialize.py') {
+  constructor(scriptPath: string = 'python/python_script.py') {
     this.pythonPath = process.env.PYTHON_PATH || 'python3';
     this.scriptPath = path.resolve(scriptPath);
     this.uploadsDir = path.resolve('uploads');
+    
+    // Debug logging
+    console.log('[DEBUG] PythonExecutor initialized with:', {
+      pythonPath: this.pythonPath,
+      scriptPath: this.scriptPath,
+      uploadsDir: this.uploadsDir,
+      PYTHON_PATH_ENV: process.env.PYTHON_PATH
+    });
   }
 
   // Validate and sanitize file paths
@@ -35,9 +43,18 @@ export class PythonExecutor {
   ): Promise<PythonExecutionResult> {
     const startTime = Date.now();
 
+    console.log('[DEBUG] Starting Python script execution:', {
+      message: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+      filesCount: files.length,
+      sessionId,
+      pythonPath: this.pythonPath,
+      scriptPath: this.scriptPath
+    });
+
     try {
       // Check if Python script exists
       if (!fs.existsSync(this.scriptPath)) {
+        console.error('[ERROR] Python script not found at:', this.scriptPath);
         return {
           success: false,
           error: `Python script not found at ${this.scriptPath}`,
@@ -69,19 +86,37 @@ export class PythonExecutor {
       };
 
       return new Promise((resolve) => {
+        console.log('[DEBUG] Spawning Python process with command:', `${this.pythonPath} ${this.scriptPath}`);
+        
+        // Set up environment with PYTHONPATH for Azure
+        const env = { ...process.env };
+        if (process.env.NODE_ENV === 'production') {
+          env.PYTHONPATH = '/home/site/wwwroot/.python_packages/lib/site-packages:' + (env.PYTHONPATH || '');
+        }
+        
+        console.log('[DEBUG] Python environment:', {
+          PYTHONPATH: env.PYTHONPATH,
+          NODE_ENV: env.NODE_ENV
+        });
+        
         const pythonProcess = spawn(this.pythonPath, [this.scriptPath], {
-          stdio: ['pipe', 'pipe', 'pipe']
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: env
         });
 
         let outputData = '';
         let errorData = '';
 
         pythonProcess.stdout.on('data', (data) => {
-          outputData += data.toString();
+          const dataStr = data.toString();
+          console.log('[DEBUG] Python stdout:', dataStr);
+          outputData += dataStr;
         });
 
         pythonProcess.stderr.on('data', (data) => {
-          errorData += data.toString();
+          const dataStr = data.toString();
+          console.log('[DEBUG] Python stderr:', dataStr);
+          errorData += dataStr;
         });
 
         pythonProcess.on('close', (code) => {

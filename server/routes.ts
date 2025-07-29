@@ -47,6 +47,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'http://127.0.0.1:5000'
   ];
   
+  // Debug log to troubleshoot CORS issues
+  console.log('[DEBUG] CORS Configuration:', {
+    ALLOWED_ORIGINS_ENV: process.env.ALLOWED_ORIGINS,
+    allowedOrigins: allowedOrigins,
+    nodeEnv: process.env.NODE_ENV
+  });
+  
   app.use(cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
@@ -98,13 +105,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   }, express.static('uploads'));
 
+  // Root endpoint for Azure health checks
+  app.get('/', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      message: 'Chat Support Widget API is running',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
+
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({ 
       status: 'ok', 
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
+      port: process.env.PORT || 5000,
+      host: process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1'
     });
+  });
+
+  // Python package installer endpoint
+  app.get('/api/install-python-packages', async (req, res) => {
+    try {
+      const { spawn } = await import('child_process');
+      const path = await import('path');
+      
+      const pythonPath = process.env.PYTHON_PATH || 'python3';
+      const installerScriptPath = path.resolve('python/install-packages.py');
+      
+      console.log('[DEBUG] Running Python package installer:', installerScriptPath);
+      
+      // Set up environment with PYTHONPATH for Azure
+      const env = { ...process.env };
+      if (process.env.NODE_ENV === 'production') {
+        env.PYTHONPATH = '/home/site/wwwroot/.python_packages/lib/site-packages:' + (env.PYTHONPATH || '');
+      }
+      
+      const pythonProcess = spawn(pythonPath, [installerScriptPath], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: env
+      });
+
+      let outputData = '';
+      let errorData = '';
+
+      pythonProcess.stdout.on('data', (data) => {
+        outputData += data.toString();
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        errorData += data.toString();
+      });
+
+      pythonProcess.on('close', (code) => {
+        if (code !== 0) {
+          res.status(500).json({
+            error: 'Python package installer failed',
+            exitCode: code,
+            stderr: errorData,
+            stdout: outputData
+          });
+        } else {
+          res.json({
+            success: true,
+            message: 'Python packages installed successfully',
+            stdout: outputData,
+            stderr: errorData
+          });
+        }
+      });
+
+      pythonProcess.on('error', (error) => {
+        res.status(500).json({
+          error: 'Failed to execute Python package installer',
+          message: error.message
+        });
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to run Python package installer',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Python environment debug endpoint
+  app.get('/api/debug/python', async (req, res) => {
+    try {
+      const { spawn } = await import('child_process');
+      const path = await import('path');
+      
+      const pythonPath = process.env.PYTHON_PATH || 'python3';
+      const debugScriptPath = path.resolve('python/debug-env.py');
+      
+      console.log('[DEBUG] Running Python debug script:', debugScriptPath);
+      
+      // Set up environment with PYTHONPATH for Azure
+      const env = { ...process.env };
+      if (process.env.NODE_ENV === 'production') {
+        env.PYTHONPATH = '/home/site/wwwroot/.python_packages/lib/site-packages:' + (env.PYTHONPATH || '');
+      }
+      
+      console.log('[DEBUG] Python debug environment:', {
+        PYTHONPATH: env.PYTHONPATH,
+        NODE_ENV: env.NODE_ENV
+      });
+      
+      const pythonProcess = spawn(pythonPath, [debugScriptPath], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: env
+      });
+
+      let outputData = '';
+      let errorData = '';
+
+      pythonProcess.stdout.on('data', (data) => {
+        outputData += data.toString();
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        errorData += data.toString();
+      });
+
+      pythonProcess.on('close', (code) => {
+        if (code !== 0) {
+          res.status(500).json({
+            error: 'Python debug script failed',
+            exitCode: code,
+            stderr: errorData,
+            stdout: outputData
+          });
+        } else {
+          res.json({
+            success: true,
+            pythonPath,
+            debugScriptPath,
+            stdout: outputData,
+            stderr: errorData
+          });
+        }
+      });
+
+      pythonProcess.on('error', (error) => {
+        res.status(500).json({
+          error: 'Failed to execute Python debug script',
+          message: error.message
+        });
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to run Python debug',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
 
   // Create or get chat session

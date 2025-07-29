@@ -41,12 +41,25 @@ console.log("Static path:", path.join(__dirname, "..", "client", "public"));
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen(port, '127.0.0.1', () => {
-    log(`Serving on http://127.0.0.1:${port}`);
+  // Use PORT environment variable (Azure provides this) or fallback to 5000
+  const port = process.env.PORT || 5000;
+  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+  
+  console.log('[DEBUG] Server startup configuration:', {
+    port: port,
+    host: host,
+    NODE_ENV: process.env.NODE_ENV,
+    PORT_ENV: process.env.PORT
+  });
+  
+  server.listen(Number(port), host, () => {
+    log(`Serving on http://${host}:${port}`);
+    console.log('[DEBUG] Server successfully started and listening');
+  });
+  
+  // Add error handling for the server
+  server.on('error', (error) => {
+    console.error('[ERROR] Server error:', error);
   });
   
 })();

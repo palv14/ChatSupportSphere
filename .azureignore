@@ -1,0 +1,29 @@
+# Node modules and lock files
+node_modules/
+package-lock.json
+
+# Python cache and example env
+python/__pycache__/
+python/env.example
+
+# Local environment and config
+.env
+*.env
+.vscode/
+.DS_Store
+
+# Test and sample HTML files
+feedback-test.html
+test-widget.html
+widget-test.html
+
+# Docs and markdown
+*.md
+docs/
+
+# Build artifacts (if you want Azure to build)
+client/dist/
+client/build/
+
+# Misc
+replit.md 
