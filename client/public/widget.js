@@ -325,13 +325,14 @@
           ${config.position.includes('right') ? 'right: 0;' : 'left: 0;'}
           width: 320px;
           height: 400px;
-          background: white;
+          background: white !important;
           border-radius: 12px;
           box-shadow: 0 10px 25px rgba(0,0,0,0.15);
           display: none;
           flex-direction: column;
           overflow: hidden;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 999999;
         ">
           <!-- Header -->
           <div id="chat-header" style="
@@ -406,6 +407,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            background: white !important;
           ">
             <!-- Welcome message -->
             <div style="display: flex; align-items: flex-start; gap: 8px;">
@@ -447,13 +449,14 @@
             gap: 8px;
             border-top: 1px solid #e5e7eb;
             padding-top: 12px;
+            background: white !important;
           "></div>
 
           <!-- Input -->
           <div style="
             padding: 16px;
             border-top: 1px solid #e5e7eb;
-            background: white;
+            background: white !important;
           ">
             <div style="display: flex; align-items: flex-end; gap: 8px;">
               <textarea id="chat-input" placeholder="Type your message..." style="
@@ -844,6 +847,7 @@
         overflow: hidden !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         z-index: 999999 !important;
+        background: white !important;
       `;
       
       // Update expand button icon to show collapse
@@ -872,6 +876,7 @@
         flex-direction: column !important;
         overflow: hidden !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        z-index: 999999 !important;
       `;
       
       // Update expand button icon to show expand

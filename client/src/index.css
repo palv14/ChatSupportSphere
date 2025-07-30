@@ -57,3 +57,53 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Chat Widget Opaque Background Override */
+.chat-widget-card,
+.chat-widget-card *,
+[class*="chat-widget"] {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  background: white !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+/* Force all chat widget elements to be opaque */
+.chat-widget-card *,
+.chat-widget-card *::before,
+.chat-widget-card *::after {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  background: white !important;
+}
+
+/* Override any potential transparent backgrounds */
+[data-radix-popper-content-wrapper],
+[data-radix-tooltip-content],
+[data-radix-popover-content] {
+  background-color: white !important;
+  backdrop-filter: none !important;
+}
+
+/* Specific overrides for embeddable widget */
+#chat-widget-root,
+#chat-widget-root *,
+#chat-widget-root *::before,
+#chat-widget-root *::after {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  background: white !important;
+}
+
+/* Force all motion.div elements in chat widget to be opaque */
+.chat-widget-card,
+.chat-widget-card *,
+.chat-widget-card *::before,
+.chat-widget-card *::after {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  background: white !important;
+  opacity: 1 !important;
+}
